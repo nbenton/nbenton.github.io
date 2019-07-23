@@ -1,0 +1,220 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+        "http://www.w3.org/TR/html4/loose.dtd">
+<html lang="en">
+<head>
+	<meta http-equiv="content-type" content="text/html; charset=iso-8859-1">
+	<title>Nick Benton: Research</title>
+	<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div id="banner">
+	<h1><a href="index.html">Nick Benton</a></h1>
+</div>
+<div id="container">
+<!-- <div id="container2"> -->
+	<div id="navigation">
+		<ul>
+	<li><a href="research.html">Research Interests</a></li>
+			<li><a href="publications.html">Publications</a></li>
+			<li><a href="activities.html">Talks, etc.</a></li>
+			<li><a href="personal.html">Personal</a></li>
+			<li><a href="contact.html">Contact</a></li>
+<p></p>
+			<li><a href="leviathan.html">Leviathan</a></li>
+			<li><a href="http://research.microsoft.com/comega/">C&#969</a></li>
+			<li><a href="polyphony.html">Polyphonic C#</a></li>
+			<li><a href="http://www.cl.cam.ac.uk/Research/TSG/SMLNET/">SML.NET</a></li>
+			<li><a href="mlj.html">MLj</a></li>
+				<li><a
+			href="https://github.com/nbenton/coqdomains">Coqdomains</a></li>
+			<li><a
+			href="https://github.com/nbenton/x86proved">x86proved</a></li>
+			<li><a href="https://hacklang.org/">Hack</a></li>
+		</ul>
+	</div>
+<!--
+	<div id="more">
+		<h3>Find out more</h3>
+		<p>
+			Lorem ipsum dolor sit amet, consectetuer adipiscing elit, sed diam nonummy nibh euismod tincidunt ut laoreet.
+		</p>
+	</div>
+-->
+	<div id="content">
+		<h2>Research</h2> 
+		<p> 
+<!-- <img class="floatright" src="tracessmaller.jpg"> -->
+<img class="floatright" src="whiteboardsmall.jpg">
+<p>
+I work on the semantics, design and implementation of programming
+languages. One goal is to develop new languages, programming models,
+abstractions and reasoning principles that enable programmers write
+correct, reliable, secure software more easily and quickly. A second
+is to develop compiler and implementation technologies that allow
+programs to execute and interoperate more efficiently. I'm a firm believer in the not entirely unreasonable
+effectiveness of mathematics in computing science.
+<!-- But as well -->
+<!-- being practically useful, the theory of programming languages is -->
+<!-- beautiful, deep, challenging and fun, which is the real reason for -->
+<!-- doing it.   -->
+</p>
+<p>My PhD thesis was on strictness analysis, a compile-time
+program analysis for lazy functional languages such as Haskell. One of
+its applications is in selectively transforming call-by-need
+evaluation (which gives the language nice equational properties but is
+not terribly efficient) into call-by-value (which is generally less
+costly). I developed a logical, or type theoretic, technique for
+strictness analysis, and investigated its denotational semantics and
+extension with polymorphism and algebraic datatypes.
+</p>
+<p>
+One of the prettiest things there is in life is a three-way
+correspondence between an intuitionistic logic, a type theory and a
+class of categorical model. Between 92 and 98, working at various
+times with Gavin Bierman, Valeria de Paiva, Martin Hyland and Philip
+Wadler, I did lots of this `categorical proof theory', with particular
+reference to linear logic. We came up with term calculi and
+categorical models for various forms of intuitionistic linear logic,
+and developed some elegant connections with computational monads. I'm
+still especially proud of my strong normalization proof for the linear
+term calculus via the encoding of coinductive types in System F.
+</p>
+<p>
+Like all right-thinking people, I'm a functional programmer. Back in
+97, Andrew Kennedy, George Russell and I designed and implemented MLj,
+a compiler for Standard ML that compiles to Java bytecodes (<EM>"*wow* This is seriously great!"</EM> - James Gosling). MLj lets
+you program in your favourite functional programming language whilst
+also having smooth access to a wide range of libraries and components
+written in Java (though of course, object orientation is still the work of Beelzebub). You can easily write ML programs that have GUIs, play
+music, process XML, run in a web browser or on a web server, and all
+the other things that small groups of academics whose primary interest
+is compilers tended not to get around to making straightforward. The
+MLj compiler has some interesting features too, including being, as far as we know, 
+the first implementation of parametric polymorphism by
+representation-based specialization (later used to implement generics in the CLR), and the use of a
+monadically-typed intermediate language for optimization. Andrew and
+I, with Claudio Russo, subsequently developed MLj further into
+SML.NET, which targets the .NET Common Language Runtime. We first
+showed SML.NET off at PDC 2000, where .NET was officially launched. SML.NET
+supports the full SML'97 language standard, including the module
+system, and even runs inside Visual Studio.
+</p>
+<p>
+Luca Cardelli, Cedric Fournet and I designed and implemented
+Polyphonic C#, an extension of C# with new constructs for concurrent
+programming, derived from the Join Calculus. Writing correct
+concurrent programs is notoriously difficult, but Polyphonic C# is
+significantly easier to use than traditional lock-based approaches to
+concurrency. Furthermore, its simple model applies equally well to
+old-fashioned shared memory concurrency on a single machine and to
+message-based concurrency across a wide area network. The Polyphonic
+C# extensions were later included in C&#969, which also adds XML and
+relational data manipulation features to C#.
+</p>
+<p>
+Quite a bit of my work has involved modelling and reasoning about mutable
+state, in both high and low-level languages. Starting with my
+        introduction of Relational Hoare Logic in 2004, I've looked at how
+to verify a range of static analyses and the transformations they
+enable, how to reason about program equivalences in the presence of
+higher-order functions and dynamically allocated references, and how
+to design compositional program logics for low-level languages such as
+assembly code. Much of this work was formalized using the Coq
+proof assistant, which is both an amazingly great system and a fine
+way to keep one's productivity down to a respectable level. I'm a proud member of the <a href="http://www.mpi-sws.org/~dreyer/parametric/">parametricity mafia</a>.
+</p>
+
+<p>
+When I joined Facebook, I soon got to put some of this research into
+practice by building an automated tool for showing semantic equivalence
+of the bytecode produced by old and new versions of the Hack
+compiler. My team is currently overhauling the Hack type system and
+inference algorithm.
+</p>
+
+<h3>Interns</h3>
+I have had a whole string of great interns over the years:
+<ul>
+<li><a href="http://www.cl.cam.ac.uk/users/mrs30/">Mark Shinwell</a> 2000. Implementation of Polyphonic C#.</li>
+<li><a href="http://www.di.unipi.it/~melgratt/">Hernan Melgratti</a> 2003. Adding pattern-matching to Polyphonic C#.</li> 
+<li><a href="http://homepages.inf.ed.ac.uk/slindley/">Sam Lindley</a> 2003/4. Speeding up rewriting in the SML.NET compiler.</li>
+<li><a href="http://www.pps.jussieu.fr/~leperche/">Benjamin Leperchey</a> 2004. Denotational models of dynamically-allocated references.</li>
+<li><a href="http://www.itu.dk/people/noah/">Noah Torp-Smith</a> 2005. Specification and verification of low-level code for memory allocation.</li>
+<li>Uri Zarfaty 2006. Machine-checked relational type soundness for a simple compiler.</li>
+<li><a href="http://www.dcs.qmul.ac.uk/~ivanam/">Ivana Mijajlovic</a> 2006.
+Improved specification and verification of low-level code for memory allocation.
+</li>
+<li><a href="https://www.cs.tcd.ie/Vasileios.Koutavas/">Vassilis Koutavas</a> 2007.
+Mechanizing bisimulation for the nu-calculus.
+</li>
+<li><a href="http://www.pps.jussieu.fr/~tabareau/">Nicolas Tabareau</a> 2007. Mechanizing an interpretation of functional types as relations on compiled code.
+</li>
+<li><a href="http://www.cs.cmu.edu/~neelk/">Neel Krishnaswami</a> 2008. Relating denotational models to compiled code.
+</li>
+<li><a href="http://www.mpi-sws.org/~gil/">Chung-Kil Hur</a> 2008/9. Biorthogonality, step-indexing and compiler correctness.</li>
+<li><a href="http://www.mpi-sws.org/~neis/">Georg Neis</a> 2010. Compositionality in program verification.</li>
+<li><a href="http://guilhem.jaber.fr/">Guilhem Jaber</a> 2011. Formalized reasoning about x86 code.</li>
+<li><a href="http://www.itu.dk/people/jobr">Jonas Braband Jensen</a> 2012. Separation logic for machine code.</li>
+<li><a href="https://personal.cis.strath.ac.uk/pierreevariste.dagand/">Pierre-Evariste Dagand</a> 2013. Verified x86 compilation of regular languages.</li>
+<li><a href="http://www.cs.bham.ac.uk/~ohf162/">Olle Fredriksson</a> 2014. Higher-level abstractions for verified machine code.</li>
+<li><a href="https://www.cs.cmu.edu/directory/rkavanag">Ryan
+Kavanagh</a> 2015. Algorithms for caching build systems.</li>
+<li><a href="http://www.columbia.edu/~mv2745/">Matthis Vakar</a> 2016. Implementing a caching build
+system.</li>
+<li><a href="https://github.com/fangyi-zhou">Fangyi Zhou</a> 2017. Extensions to the Hack language.</li>
+</ul>
+
+<h3>Postdocs</h3>
+And I've had the privilege of working with some amazing postdocs:
+<ul>
+<li><a href="http://software.imdea.org/~aleks/">Aleks Nanevski</a> 2007-2009.</li>
+<li><a href="http://www.cs.cmu.edu/~neelk/">Neel Krishnaswami</a> 2009-2011.</li>
+<li><a href="http://www.eecs.harvard.edu/~mainland/">Geoffrey Mainland</a> 2011-2013. </li>
+<li><a href="http://cse.snu.ac.kr/en/professor/chung-kil-hur">Chung-Kil Hur</a> 2012-2013. </li>
+</ul>
+
+<h3>PhD Students</h3> I
+supervised <a href="http://ken.friislarsen.net/">Ken Friis Larsen</a>
+for some of his PhD and acted as second/third supervisor to Peter
+Buchlovsky and Matt Ridsdale.
+
+<h3>Miscellaneous</h3>
+<p>I've been associated with the EU ESPRIT BRAs CLICS, CLICS-II and LOMAPS, the TMR LINEAR and the WGs APPSEM and APPSEM-II. I'm currently on the management committee of the EU COST Action <a href="http://www.cost.eu/COST_Actions/ca/CA15123">EUTYPES</a> and the industrial advisory board for the NSF <a href="http://deepspec.org/">DeepSpec</a> Expedition.
+</p>
+<p>My <a href="http://www.oakland.edu/~grossman/erdoshp.html">Erd<font face="Times New Roman">ö</font>s 
+number</a> is <font size="4">4</font>: Benton-Hyland-Pitts-Makkai-Erd<font face="Times New Roman">ö</font>s, or  Benton-Cardelli-Smith-Magidor-Erd<font face="Times New Roman">ö</font>s, or Benton-Cardelli-Scedrov-Blass-Erdös, or... Offers of collaboration from those whose numbers are 1 or 2 are, of course, particularly welcome.</p>
+
+<p>I'm a member of the
+<a href="http://www.epsrc.ac.uk/">EPSRC</a> Peer Review College,
+the <a href="http://www.acm.org">ACM</a>,
+<a href="http://www.maths.leeds.ac.uk/cie/">CiE</a>
+and <a href="http://danae.uni-muenster.de/eapls/">EAPLS</a>.
+I am currently a member of Industrial Panels at the University of Kent and the University of Birmingham, and have also been on one at QMW.</p>
+
+<p>I supervised many Queens' College undergraduates and have
+lectured at several summer schools and the University of Cambridge. I
+have been Director of Studies in Computer Science at Pembroke College
+and at Robinson College.</p>
+
+<p>
+<EM>He may be mad, but there's method in his madness. There nearly always
+is method in madness. It's what drives men mad, being methodical.</EM> - GK
+Chesterton.
+</p>
+	</div>
+	<div id="cleardiv"></div>
+<!-- </div> -->
+</div>
+<div id="footer">
+<!--
+	<ul>
+		<li><a href="#">Footer item 1</a></li>
+		<li><a href="#">Footer item 2</a></li>
+		<li><a href="#">Footer item 3</a></li>
+		<li><a href="#">Copyright &copy; sitename</a></li>
+	</ul>
+-->
+</div>
+
+</body>
+</html>

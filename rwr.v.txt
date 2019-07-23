@@ -1,0 +1,1309 @@
+(*
+  rwr.v
+  Coq script for the semantic bits of 
+
+    Reading, Writing and Relations: Towards Extensional Semantics for Effect Analyses
+    Nick Benton, Andrew Kennedy, Martin Hofmann and Lennart Beringer
+    June 2006
+
+  This formalization is `shallow', in the sense that we don't
+  directly treat the term language, just its semantics.
+  So we prove properties of the relational semantics of refined
+  types (e.g. that they're partial equivalence relations), and we
+  prove the subtle effect-dependent equivalences hold in the
+  denotational semantics.
+
+*)
+
+Require Import Arith.
+Require Import Bool.
+Require Import EqNat.
+Require Import BoolEq.
+Require Import Max.
+Require Import Omega.
+
+Axiom Extensionality : forall (A B : Set) (f g : A->B), 
+ (forall a, f a = g a) -> f = g.
+
+Ltac dcase x := generalize (refl_equal x); pattern x at -1; case x.
+
+Definition Vars := nat.
+
+Definition Vals := nat.
+
+Definition S := Vars -> Vals. 
+(* what kind of moron shadows the successor function? *)
+
+Definition update (s:S) g n := 
+fun g2 => if beq_nat g g2 then n else s g2.
+
+Definition T (X:Set) := S -> prod S X.
+
+Definition srel := S -> S -> Prop.
+
+Definition calreads g (R:srel) := forall s s' : S, R s s' -> s g = s' g.
+
+Definition calwrites g (R:srel) := 
+forall s s' : S, R s s' -> forall x, R (update s g x) (update s' g x).
+
+Definition Eff := prodT (Vars->Prop) (Vars->Prop). (* reads, writes *)
+Definition reads (e:Eff) := fstT e.
+Definition writes (e:Eff) := sndT e.
+
+
+Definition caleff (e:Eff) (R:srel) := 
+  forall g, (reads e g -> calreads g R) 
+             /\ (writes e g -> calwrites g R).
+
+Definition TEff (e:Eff) (X:Set) (M : T X) (M' : T X) :=
+ forall R, caleff e R -> forall s0 s0', R s0 s0' -> match (M s0, M' s0') 
+                                                with ((s1,x1),(s1',x1'))
+                                                 => (R s1 s1') /\ (x1=x1')
+                                                end.
+
+Definition Val (X:Set) (v:X) := fun (s:S) => (s,v).
+
+Definition Letin (X:Set) (Y:Set) (M : T X) (N : X -> T Y) :=  
+fun s0 => match M s0 with (s1,x1) => N x1 s1 end.
+
+Definition HasEff e X (M : T X) := TEff e X M M.
+
+Definition NoWrites e := (forall g, ~(writes e g)).
+
+Definition diag_rel (A :Set) (a : A) (a':A) := a = a'.
+Definition singleton_rel (A:Set) (a:A) (aa : A) (aa' : A) :=
+ (aa = a) /\ (aa' = a).
+
+Definition pure : Eff := pairT (fun g=>False) (fun f=>False).
+
+Lemma val_is_pure : forall X v, HasEff pure X (Val X v).
+intros X v.
+firstorder.
+Qed.
+
+Definition Arrow (A:Set) (pre : A->A->Prop) (B: Set) (post : B->B->Prop)
+ (f : A->B) (f' : A->B) := forall a a', pre a a' -> post (f a) (f' a').
+
+Definition PER (A:Set) (R:A->A->Prop) :=
+ (forall a a', (R a a') -> (R a' a)) /\
+ (forall a a' a'', R a a' -> R a' a'' -> R a a'').
+
+(* Wrapping up PERs as records *)
+Record PERrec : Type := 
+  mkPer {carrier:Set; rel: carrier->carrier->Prop; PERcond: PER carrier rel}.
+
+Lemma diag_is_PER : forall A, PER A (diag_rel A).
+intro A.
+unfold PER.
+unfold diag_rel.
+split.
+intros a a'.
+intro Haa'.
+symmetry.
+solve [trivial].
+intros a a' a'' Haa' Ha'a''.
+rewrite Haa'.
+solve [trivial].
+Qed.
+
+Definition diagPER A := mkPer A (diag_rel A) (diag_is_PER A).
+
+Lemma singleton_is_PER : forall A a, PER A (singleton_rel A a).
+intros.
+firstorder.
+Qed.
+
+Definition singletonPER A a := 
+  mkPer A (singleton_rel A a) (singleton_is_PER A a).
+
+Lemma arrow_pers : forall A pre B post,
+ PER A pre -> PER B post -> PER (A->B) (Arrow A pre B post).
+intros A pre B post Hpreper Hpostper.
+split.
+(* symmetry falls immediately to firstorder, but let's do it properly *)
+unfold Arrow.
+intros f f' Hff' a a' Haa'.
+cut (pre a' a).
+intro Ha'a.
+assert (Hfa'f'a := Hff' a' a Ha'a).
+elim Hpostper.
+intros Hpostsym Hposttrans.
+apply (Hpostsym (f a') (f' a) Hfa'f'a).
+(* done that one *)
+elim Hpreper.
+intros Hpresym Hpretrans.
+apply (Hpresym a a' Haa').
+(* and that one, now transitivity *)
+intros f g h.
+unfold Arrow.
+intros fgaa' ghaa' a a' Hpreaa'.
+elim Hpreper.
+intros Hpresym Hpretrans.
+clear Hpreper.
+elim Hpostper.
+intros Hpostsym Hposttrans.
+clear Hpostper.
+apply (Hposttrans (f a) (g a) (h a')).
+apply (fgaa' a a).
+apply (Hpretrans a a' a).
+trivial.
+apply (Hpresym a a' Hpreaa').
+apply (ghaa' a a' Hpreaa').
+Qed.
+
+
+Definition arrowPER P Q :=
+ mkPer ((carrier P)->(carrier Q))
+ (Arrow (carrier P) (rel P) (carrier Q) (rel Q))
+ (arrow_pers (carrier P) (rel P) 
+             (carrier Q) (rel Q) 
+             (PERcond P)
+             (PERcond Q)).
+
+Definition inverse (X:Set) (R : X->X->Prop) x x' := R x' x.
+
+Lemma caleff_diag_any_e : forall e, caleff e (diag_rel S).
+intros.
+unfold caleff.
+unfold diag_rel.
+intro g.
+split.
+unfold calreads.
+intros.
+rewrite H0.
+reflexivity.
+unfold calwrites.
+intros.
+rewrite H0.
+reflexivity.
+Qed.
+
+Lemma Eff_is_PER : forall e X, PER (T X) (TEff e X).
+intros e X.
+split.
+intros M M'.
+unfold TEff.
+intro HMM'.
+intros R HeR s s' HRss'.
+cut (caleff e (inverse S R)).
+intro HERinv.
+cut (inverse S R s' s).
+intro HRinvs's.
+assert (HMM'Rinv := HMM' (inverse S R) HERinv s' s HRinvs's).
+generalize (refl_equal (M' s)).
+pattern (M' s) at -1.
+case (M' s).
+intros sm's xm's Hm's.
+generalize (refl_equal (M s')).
+pattern (M s') at -1.
+case (M s').
+intros sms' xms' Hms'.
+rewrite Hm's in HMM'Rinv.
+rewrite Hms' in HMM'Rinv.
+unfold inverse in HMM'Rinv.
+split.
+tauto.
+symmetry.
+tauto.
+(* now the inverse *)
+unfold inverse.
+trivial.
+(* now caleff inverse (this could be a separate lemma?) *)
+clear HMM' M M' s s' HRss' X.
+unfold caleff in * .
+intro g.
+split.
+intro Hreadseg.
+unfold calreads in * . 
+unfold inverse.
+intros s s' HRs's.
+assert (HeRg := HeR g).
+elim HeRg.
+intros Hread Hwrite.
+symmetry.
+apply (Hread Hreadseg s' s HRs's).
+(* now writes *)
+unfold calwrites in * .
+unfold inverse.
+intros Hwriteseg s s' HRs's x.
+elim (HeR g).
+intros Hread Hwrite.
+apply (Hwrite Hwriteseg s' s HRs's x).
+(* Now down to transitivity *)
+intros a a' a'' HEffaa' HEffa'a''.
+unfold TEff.
+intros R HeR s s' HRss'.
+generalize (refl_equal (a s)).
+pattern (a s) at -1.
+case (a s).
+intros sas xas Has.
+generalize (refl_equal (a'' s')).
+pattern (a'' s') at -1.
+case (a'' s').
+intros sa''s' xa''s' Ha''s'.
+unfold TEff in * .
+(* oooer, going to want some kind of transitivity result for caleffs
+   here, with relational composition?
+  Oh, no, it's asymmetric - use identity (diag) on one half
+*)
+assert (Hidaa' := HEffaa' (diag_rel S) (caleff_diag_any_e e) s s (refl_equal s)).
+rewrite Has in Hidaa'.
+generalize (refl_equal (a' s)).
+pattern (a' s) at -1.
+case (a' s).
+intros sa's xa's Ha's.
+rewrite Ha's in Hidaa'.
+unfold diag_rel in Hidaa'.
+elim Hidaa'.
+intros Hsasissa's Hxasisxa's.
+rewrite Hsasissa's .
+rewrite Hxasisxa's.
+assert (Hfoo := HEffa'a'' R HeR s s' HRss').
+rewrite Ha's in Hfoo.
+rewrite Ha''s' in Hfoo.
+trivial.
+Qed.
+
+(* want the proper version with X a PER *)
+
+(* This should be an instance of singleton_rel *)
+Definition statesingleton (s:S) sn sn' := (sn = s) /\ (sn' = s).
+
+
+Lemma nowritessing : forall e s, NoWrites e -> caleff e (statesingleton s).
+unfold NoWrites.
+unfold caleff.
+intros e s Hnowrites g.
+unfold statesingleton.
+split.
+unfold calreads.
+intros Hreads s1 s2.
+firstorder.
+rewrite H.
+rewrite H0.
+auto.
+intro Hw.
+absurd (writes e g).
+apply (Hnowrites  g).
+trivial.
+Qed.
+
+Lemma nowrites : forall e X M, (HasEff e X M) -> (NoWrites e) ->
+ forall sb sa z, M sb = (sa, z) -> sa = sb.
+intros e X M HMeff HNowrites sb sa z Hstep.
+assert (Heffsing := nowritessing e sb HNowrites).
+unfold HasEff in HMeff.
+unfold TEff in HMeff.
+assert (Hfoo := HMeff (statesingleton sb) Heffsing sb sb).
+rewrite Hstep in Hfoo.
+unfold statesingleton in Hfoo.
+firstorder.
+Qed.
+
+
+Lemma Dead : forall e X M e' Y N , (HasEff e X M) -> (HasEff e' Y N) ->
+  (NoWrites e) ->
+  TEff e' Y (Letin X Y M (fun x => N)) N.
+unfold TEff.
+intros until N.
+intros HMeff HNeff Hnowrites.
+intros R Hrprese' s0 s0' Hrelbefore.
+unfold Letin.
+generalize (refl_equal (M s0)).
+pattern (M s0) at -1.
+case (M s0).
+intros s1 x1 Hms0.
+generalize (refl_equal (N s1)).
+pattern (N s1) at -1.
+case (N s1).
+intros s2 x2 Hns1.
+generalize (refl_equal (N s0')).
+pattern (N s0') at -1.
+case (N s0').
+intros s1' x1' Hns0'.
+assert (Hs1eqs0 := nowrites e X M HMeff Hnowrites s0 s1 x1 Hms0).
+rewrite <- Hs1eqs0 in Hrelbefore.
+assert (Hfoo := HNeff R Hrprese' s1 s0' Hrelbefore).
+rewrite Hns0' in Hfoo.
+rewrite Hns1 in Hfoo.
+trivial.
+Qed.
+
+(* proper version of TEff over PERrecords *)
+Definition TEffp (e:Eff) X (M : T (carrier X)) (M' : T (carrier X)) :=
+ forall R, caleff e R -> 
+    forall s0 s0', R s0 s0' -> match (M s0, M' s0') 
+                               with ((s1,x1),(s1',x1'))
+                                    => (R s1 s1') /\ (rel X x1 x1')
+                               end.
+
+Lemma TEffp_is_PER : forall e X, PER (T (carrier X)) (TEffp e X).
+intros e X.
+split.
+intros M M'.
+unfold TEffp.
+intro HMM'.
+intros R HeR s s' HRss'.
+cut (caleff e (inverse S R)).
+intro HERinv.
+cut (inverse S R s' s).
+intro HRinvs's.
+assert (HMM'Rinv := HMM' (inverse S R) HERinv s' s HRinvs's).
+generalize (refl_equal (M' s)).
+pattern (M' s) at -1.
+case (M' s).
+intros sm's xm's Hm's.
+generalize (refl_equal (M s')).
+pattern (M s') at -1.
+case (M s').
+intros sms' xms' Hms'.
+rewrite Hm's in HMM'Rinv.
+rewrite Hms' in HMM'Rinv.
+unfold inverse in HMM'Rinv.
+split.
+tauto.
+assert (Hxper := PERcond X).
+elim Hxper.
+clear Hxper.
+intros Hxsym Hxtrans.
+clear Hxtrans.
+apply (Hxsym xms' xm's).
+tauto.
+(* now the inverse *)
+unfold inverse.
+trivial.
+(* now caleff inverse (this could be a separate lemma?) *)
+clear HMM' M M' s s' HRss' X.
+unfold caleff in * .
+intro g.
+split.
+intro Hreadseg.
+unfold calreads in * . 
+unfold inverse.
+intros s s' HRs's.
+assert (HeRg := HeR g).
+elim HeRg.
+intros Hread Hwrite.
+symmetry.
+apply (Hread Hreadseg s' s HRs's).
+(* now writes *)
+unfold calwrites in * .
+unfold inverse.
+intros Hwriteseg s s' HRs's x.
+elim (HeR g).
+intros Hread Hwrite.
+apply (Hwrite Hwriteseg s' s HRs's x).
+(* Now down to transitivity *)
+intros a a' a'' HEffaa' HEffa'a''.
+unfold TEffp.
+intros R HeR s s' HRss'.
+generalize (refl_equal (a s)).
+pattern (a s) at -1.
+case (a s).
+intros sas xas Has.
+generalize (refl_equal (a'' s')).
+pattern (a'' s') at -1.
+case (a'' s').
+intros sa''s' xa''s' Ha''s'.
+unfold TEffp in * .
+(* This is asymmetric - use identity (diag) on one half *)
+assert (Hidaa' := HEffaa' (diag_rel S) (caleff_diag_any_e e) s s (refl_equal s)).
+rewrite Has in Hidaa'.
+generalize (refl_equal (a' s)).
+pattern (a' s) at -1.
+case (a' s).
+intros sa's xa's Ha's.
+rewrite Ha's in Hidaa'.
+unfold diag_rel in Hidaa'.
+elim Hidaa'.
+intros Hsasissa's Hxasisxa's.
+rewrite Hsasissa's .
+(* want to apply transitivity with rel X xa's xa''s' *)
+(* rewrite Hxasisxa's. *)
+assert (Hfoo := HEffa'a'' R HeR s s' HRss').
+rewrite Ha's in Hfoo.
+rewrite Ha''s' in Hfoo.
+assert (Hxper := PERcond X).
+elim Hxper.
+clear Hxper.
+intros Hxsym Hxtrans.
+split.
+tauto.
+apply (Hxtrans xas xa's xa''s').
+tauto.
+tauto.
+Qed.
+
+Lemma nowritesp : forall e X M, (TEffp e X M M) -> (NoWrites e) ->
+ forall sb sa z, M sb = (sa, z) -> sa = sb.
+intros e X M HMeff HNowrites sb sa z Hstep.
+assert (Heffsing := nowritessing e sb HNowrites).
+unfold HasEff in HMeff.
+unfold TEff in HMeff.
+assert (Hfoo := HMeff (statesingleton sb) Heffsing sb sb).
+rewrite Hstep in Hfoo.
+unfold statesingleton in Hfoo.
+firstorder.
+Qed.
+
+
+(* Wrapping up TEff as a per record *)
+Definition teffPER e X := 
+mkPer (T (carrier X))
+      (TEffp e X)
+      (TEffp_is_PER e X).
+
+Definition hastype X x := rel X x x.
+
+Lemma purenowrites : NoWrites pure.
+firstorder.
+Qed.
+
+Definition sing2 (sleft:S) (sright:S) s s' := (s=sleft)/\(s'=sright).
+
+Lemma caleff_pure_anyrel : forall R, caleff pure R.
+firstorder.
+Qed.
+
+Lemma PureLambdaHoist :
+ forall X Y Z e M N,
+  hastype (teffPER pure Z) M  ->
+  hastype (arrowPER X (arrowPER Z (teffPER e Y))) N ->
+  rel  (teffPER pure (arrowPER X (teffPER e Y)))
+   (Val _ (fun x => Letin _ _ M (N x)))
+   (Letin _ _ M (fun y => Val _ (fun x => N x y))).
+simpl.
+intros until N.
+intro HMpure.
+intro HNarrow.
+unfold TEffp.
+unfold caleff.
+unfold pure.
+simpl.
+intro R.
+intro Hvacuous.
+intros s0 s0' HRs0s0'.
+red.
+generalize (refl_equal (M s0')).
+pattern (M s0') at -1.
+case (M s0').
+intros s1' z1' Hm1'.
+red.
+split.
+cut (s1' = s0').
+intro Hs1'iss0'.
+rewrite Hs1'iss0'.
+trivial.
+(* now show cut equality cos M is pure - should be lemma'd*)
+apply (nowritesp _ _ _ HMpure purenowrites s0' s1' z1' Hm1').
+(* Now down to the arrow part *)
+unfold Arrow.
+intros a a' HXaa'.
+unfold Letin.
+unfold Arrow in HNarrow.
+(* now slightly screwed cos can't do usual generalize trick under binder *)
+red.
+(* what I've got here is TEffp e Y (N . . ) (N . . ) *)
+intros R2 HeR2 s2 s2' HR2s2s2'.
+generalize (refl_equal (M s2)).
+pattern (M s2) at -1.
+case (M s2).
+intros s3 z3 Hms2.
+cut (s3 = s2).
+intro Hs3iss2.
+rewrite Hs3iss2.
+(* we'll get s3 is s2 from M pure 
+   know s2 s2' in R2
+   want z3 z1' in rel X
+   get that from singleton rel s2 s0' and M pure
+*)
+cut (rel Z z3 z1').
+intro Hz3z1'.
+apply (HNarrow a a' HXaa' z3 z1' Hz3z1').
+trivial.
+trivial.
+(* now down to z3 z1' *)
+unfold TEffp in HMpure.
+assert (Hfoo := HMpure (sing2 s2 s0') 
+         (caleff_pure_anyrel (sing2 s2 s0')) s2 s0').
+cut (sing2 s2 s0' s2 s0').
+intro Hcruddy.
+assert (Hfooo := Hfoo Hcruddy).
+clear Hfoo Hcruddy.
+rewrite Hms2 in Hfooo.
+rewrite Hm1' in Hfooo.
+tauto.
+firstorder.
+(* Now down to s3 = s2 from M pure, again *)
+apply (nowritesp _ _ _ HMpure purenowrites s2 s3 z3 Hms2).
+Qed.
+
+Definition Disjoint (A:Set) P Q := forall a:A, ~(P a /\ Q a).
+
+Definition Union (A:Set) P Q (a:A) := P a \/ Q a.
+
+Definition EffUnion e1 e2 := 
+  pairT (Union Vars (reads e1) (reads e2))
+        (Union Vars (writes e1) (writes e2)).
+  
+Lemma NoWritesg  : forall e X M g, (TEffp e X M M) -> (~ writes e g) ->
+ forall sb sa z, M sb = (sa, z) -> sa g = sb g.
+intros e X M g HMeff HNowritesg sb sa z Hstep.
+set (R := fun sleft sright : S => (sleft g = sb g) /\ (sright = sleft)).
+unfold TEffp in HMeff.
+cut (caleff e R).
+intro HcaleffeR.
+assert (Hfoo := HMeff R HcaleffeR sb sb).
+rewrite Hstep in Hfoo.
+cut (R sb sb).
+firstorder.
+unfold R.
+tauto.
+unfold caleff.
+intro g2.
+split.
+intro Hreads.
+unfold calreads.
+unfold R.
+intros s s' Hfoo.
+elim Hfoo;clear Hfoo; intros.
+rewrite H0.
+reflexivity.
+unfold calwrites.
+intros.
+unfold R in H0.
+elim H0.
+intros.
+rewrite H2.
+unfold R.
+split.
+unfold update.
+replace (beq_nat g2 g) with false.
+trivial.
+cut (~ (g2 = g)).
+intro Hdiff.
+red in Hdiff.
+generalize (refl_equal (beq_nat g2 g)).
+pattern (beq_nat g2 g) at -1.
+case (beq_nat g2 g).
+intro HH.
+assert (HH' := sym_eq HH).
+assert (Hargh := beq_nat_eq _ _ HH').
+contradiction (Hdiff Hargh).
+firstorder.
+intro.
+rewrite H3 in H.
+tauto.
+reflexivity.
+Qed.
+
+
+Lemma DuplicatedComputations :
+ forall X Y e1 e2 M N,
+ hastype (teffPER e1 X) M ->
+ hastype (arrowPER X (arrowPER X (teffPER e2 Y))) N ->
+ Disjoint Vars (reads e1) (writes e1) ->
+ rel (teffPER (EffUnion e1 e2) Y)
+  (Letin _ _ M (fun x=> Letin _ _ M (fun y => N x y)))
+  (Letin _ _ M (fun x => N x x)).
+intros until N.
+intros HMeff HNeff Hdisjoint.
+simpl.
+unfold TEffp.
+unfold EffUnion.
+unfold Union.
+unfold caleff.
+simpl.
+intros R HRdisj s0 s0' HRs0s0'.
+red.
+generalize (refl_equal (M s0)).
+pattern (M s0) at -1.
+case (M s0).
+intros s1 x1 HMs0.
+red.
+generalize (refl_equal (M s1)).
+pattern (M s1) at -1.
+case (M s1).
+intros s2 x2 HMs1.
+generalize (refl_equal (N x1 x2 s2)).
+pattern (N x1 x2 s2) at -1.
+case (N x1 x2 s2).
+intros s3 y3 HNx1x2s2.
+red.
+generalize (refl_equal (M s0')).
+pattern (M s0') at -1.
+case (M s0').
+intros s1' x1' HMs0'.
+generalize (refl_equal (N x1' x1' s1')).
+pattern (N x1' x1' s1') at -1.
+case (N x1' x1' s1').
+intros s2' y2' HNx1'x1's1'.
+unfold calreads in HRdisj.
+unfold calwrites in HRdisj.
+set (R' := fun sl sr => 
+    forall g, (sl g = s1 g /\ sr g = s0 g) 
+               \/ 
+              (writes e1 g /\ sl g = sr g)).
+
+(* writes e1 g then sl g = sr g else sl g = s1 g /\ sr g = s0 g). *)
+
+unfold hastype in HMeff.
+unfold teffPER in HMeff.
+red in HMeff.
+unfold TEffp in HMeff.
+cut (caleff e1 R').
+intro HR'ine1.
+assert (HMR' := HMeff R' HR'ine1 s1 s0).
+cut (R' s1 s0).
+intro HR's1s0.
+rewrite HMs1 in HMR'.
+rewrite HMs0 in HMR'.
+assert (Hs2s1 := HMR' HR's1s0).
+clear HMR'.
+unfold hastype in HNeff.
+unfold arrowPER in HNeff.
+red in HNeff.
+simpl in HNeff.
+unfold TEffp in HNeff.
+red in HNeff.
+unfold Arrow in HNeff.
+cut (caleff e1 R).
+intro HRine1.
+assert (HMpresR := HMeff R HRine1 s0 s0' HRs0s0').
+rewrite HMs0 in HMpresR.
+rewrite HMs0' in HMpresR.
+cut (caleff e2 R).
+intro HRine2.
+elim Hs2s1.
+clear Hs2s1.
+intros HR's2s1 HXx2x1.
+elim HMpresR.
+clear HMpresR.
+intros HRs1s1' HXx1x1'.
+cut (rel X x2 x1').
+intro HXx2x1'.
+assert (Halmost := HNeff x1 x1' HXx1x1' x2 x1' HXx2x1' R HRine2 s2 s1').
+rewrite HNx1'x1's1' in Halmost.
+rewrite HNx1x2s2 in Halmost.
+apply Halmost.
+(* now I've got to get R s2 s1' which requires looking at R' s2 s1 I guess *)
+unfold R' in HR's2s1.
+cut (s2 = s1).
+intro Hs2iss1.
+rewrite Hs2iss1.
+trivial.
+apply (Extensionality _ _ s2 s1).
+intro g.
+assert (HR'eq := HR's2s1 g).
+firstorder.
+(* sorted *)
+(* now need X x2 x1' which is transitivity *)
+assert (Hper := PERcond X).
+unfold PER in Hper.
+elim Hper.
+clear Hper; intros HXrefl HXtrans.
+apply (HXtrans _ _ _ HXx2x1 HXx1x1').
+(* bingo, now down to caleff e2 R *)
+firstorder.
+(* easy peasy, now e1 *)
+firstorder.
+(* done that, now R' s1 s0 *)
+unfold R'.
+tauto.
+(* done *)
+unfold caleff.
+intro g.
+split.
+intro Hreads.
+unfold Disjoint in Hdisjoint.
+cut (~ writes e1 g).
+intro Hnotwrites.
+unfold calreads.
+intros st st' HR'stst'.
+unfold R' in HR'stst'.
+assert (Hg := HR'stst' g).
+elim Hg.
+(* now two cases for sides of R', second can't happen *)
+intro Hstst'g.
+clear HR'stst' Hg.
+elim Hstst'g; clear Hstst'g; intros Hsts1g Hst's0g.
+rewrite Hsts1g.
+rewrite Hst's0g.
+apply (NoWritesg e1 _ M g HMeff Hnotwrites _ _ _ HMs0).
+(* hahaha *)
+intro Hblat.
+elim Hblat; clear Hblat; intros Hwrites Hstst'.
+trivial.
+assert (Hdg := Hdisjoint g).
+tauto.
+intro Hwrites.
+unfold calwrites.
+unfold R'.
+intros st st'.
+intro HR'stst'.
+intros x g2.
+(* now I think the split is on whether g2=g or not *)
+unfold update.
+generalize (refl_equal (beq_nat g g2)).
+pattern (beq_nat g g2) at -1.
+case (beq_nat g g2).
+intro Hgeqg2.
+assert (Hreallyeq := beq_nat_eq _ _ (sym_eq Hgeqg2)).
+right.
+rewrite <- Hreallyeq .
+tauto.
+(* other side, they're different *)
+intro Hgneqg2.
+apply (HR'stst' g2).
+Qed.
+
+(* I'm suddenly worried about decidability here... Maybe should have used bool? *)
+
+Lemma ajknowrites : forall e X M s0 s1 x,
+ hastype (teffPER e X) M ->
+ M s0 = (s1,x) ->
+ forall g, ~ (writes e g) -> s0 g = s1 g.
+simpl.
+intros until x.
+intros HeffM HMstep.
+unfold TEffp in HeffM.
+set (R := fun s s' : S => (s = s') /\ (forall g, ~ (writes e g) -> s g = s0 g)).
+assert (HcaleR : caleff e R).
+unfold caleff.
+intro g.
+split.
+unfold calreads.
+intro Hdummy.
+intros s s'.
+unfold R.
+intros [Heq Hdummy2].
+rewrite Heq.
+reflexivity.
+unfold calwrites.
+intros Hwrites s s'.
+unfold R.
+intros [Heq Hequpto] v.
+split.
+rewrite Heq.
+tauto.
+intro gg.
+unfold update.
+intro Hnowritesgg.
+replace (beq_nat g gg) with false.
+apply (Hequpto gg Hnowritesgg).
+dcase (beq_nat g gg).
+intro Hggg.
+assert (Hstuff := beq_nat_eq g gg).
+cut (g = gg).
+intro Hgegg.
+rewrite Hgegg in Hwrites.
+contradiction Hwrites.
+apply Hstuff.
+symmetry.
+exact Hggg.
+tauto.
+assert (HeffMspec := HeffM R HcaleR s0 s0).
+rewrite HMstep in HeffMspec.
+assert (HRs0s0 : R s0 s0).
+unfold R.
+split.
+tauto.
+intros g Hg.
+tauto.
+generalize (HeffMspec HRs0s0).
+intros [HRs1s1 HXxx] g Hnowritesg.
+unfold R in HRs1s1.
+generalize HRs1s1; intros [_ Hs1s0].
+symmetry.
+apply (Hs1s0  g Hnowritesg).
+Qed.
+
+
+Lemma ajknoreads : forall e X M s0 s0' s1 s1' x x',
+ hastype (teffPER e X) M ->
+ (forall g, (reads e g) -> s0 g = s0' g) ->
+ M s0 = (s1,x) ->
+ M s0' = (s1',x') ->
+ (forall g, (s1 g = s1' g) \/ (s1 g = s0 g /\ s1' g = s0' g)) /\ rel X x x'.
+intros until x'.
+intros HeffM Heqreads HMstep HMstep'.
+unfold teffPER in HeffM.
+simpl in HeffM.
+unfold TEffp in HeffM.
+set (R := fun s s' => forall g, s g = s' g \/ (s g = s0 g /\ s' g = s0' g)).
+assert (HcaleR : caleff e R).
+unfold caleff.
+intro gg.
+split.
+unfold calreads.
+intros Hreads s s' HRss'.
+generalize (HRss' gg).
+generalize (Heqreads gg Hreads).
+intuition.
+rewrite H0.
+rewrite H.
+rewrite H2.
+reflexivity.
+unfold calwrites.
+intros Hwrites s s'.
+unfold R.
+intros Hrelated v g0.
+unfold update.
+dcase (beq_nat gg g0).
+tauto.
+intro H; apply (Hrelated g0).
+assert (HRs0s0' : R s0 s0').
+unfold R.
+firstorder.
+assert (HeffMspec := HeffM R HcaleR s0 s0' HRs0s0').
+rewrite HMstep in HeffMspec.
+rewrite HMstep' in HeffMspec.
+apply HeffMspec.
+Qed.
+
+(* Commuting Computations turns out to be slightly more complex
+   Firstly, with the one-location-at-a-time definition of
+   reading, this one requires a finiteness condition to allow us
+   to do induction. In the paper we just do that by making the whole
+   set of locations finite, which is a bit brutal: it would be
+   better to work with common updates to arbitrary subsets of the 
+   possibly written locations. Here we do something a bit simpler,
+   which is just to assume that the sets of locations appearing
+   in the effects are finite. (Yet another alternative would be to
+   check that every term only *actually* affects a finite number of locations.)
+   Secondly, I'm going to assume that the effect sets are decidable. That
+   actually follows from the finiteness, but I'll just stick it 
+   in for now...
+*)
+
+Definition finitaryeffect e := (exists n, forall g, (reads e g -> g<n)) /\ (exists n, forall g, (writes e g -> g<n)).
+
+Definition decidableeffect e := prodT (forall g, {reads e g} + {~ reads e g}) (forall g, {writes e g} + {~ writes e g}).
+
+Lemma test : forall e l (P:Prop), decidableeffect e -> (reads e l -> P) -> (~reads e l -> P) -> P.
+intros e l P [Hdecr Hdecw] Hrimp Hnotrimp.
+elim (Hdecr l).
+tauto.
+tauto.
+Qed.
+
+Definition niceeffect e := prodT (decidableeffect e) (finitaryeffect e).
+
+Fixpoint bdelta (start finish : S) (n:nat) {struct n} : S := 
+ match n with 0 => start
+ | Datatypes.S n' => update (bdelta start finish n') n' (finish n')
+ end.
+
+Lemma bdelta_equalsupto : forall start finish n l, l<n -> bdelta start finish n l = finish l.
+simple induction n.
+intros l Hlleqz.
+absurd (l<0).
+apply lt_n_O.
+trivial.
+intros m IH l Hl.
+assert (Hleq := le_lt_or_eq l m (lt_n_Sm_le l m Hl)).
+elim Hleq.
+intro H.
+unfold bdelta.
+fold bdelta.
+unfold update.
+replace (beq_nat m l) with false.
+exact (IH l H).
+dcase (beq_nat m l).
+intro.
+assert (HH : m = l).
+apply beq_nat_eq.
+symmetry; trivial.
+rewrite HH in H.
+absurd (l<l).
+omega.
+trivial.
+trivial.
+intro Hlm.
+unfold bdelta.
+fold bdelta.
+unfold update.
+replace (beq_nat m l) with true.
+rewrite Hlm; reflexivity.
+rewrite Hlm.
+rewrite (beq_nat_refl m).
+reflexivity.
+Qed.
+
+
+Lemma bdelta_equalsbeyond : forall start finish n l, n<=l -> bdelta start finish n l = start l.
+simple induction n.
+intros.
+unfold bdelta.
+reflexivity.
+intros m IH l Hml.
+unfold bdelta; fold bdelta.
+unfold update.
+replace (beq_nat m l) with false.
+apply (IH l).
+omega.
+dcase (beq_nat m l).
+intro.
+absurd (m=l).
+omega.
+apply (beq_nat_eq).
+symmetry; exact H.
+tauto.
+Qed.
+
+
+
+Lemma CommutingComputations :
+ forall X1 X2 Y e1 e2 en M1 M2 N,
+ niceeffect e1 ->
+ niceeffect e2 ->
+ niceeffect en ->
+ hastype (teffPER e1 X1) M1 ->
+ hastype (teffPER e2 X2) M2 ->
+ hastype (arrowPER X1 (arrowPER X2 (teffPER en Y))) N ->
+ Disjoint Vars (reads e1) (writes e2) ->
+ Disjoint Vars (reads e2) (writes e1) ->
+ Disjoint Vars (writes e1) (writes e2) ->
+ rel (teffPER (EffUnion (EffUnion e1 e2) en) Y)
+  (Letin _ _ M1 (fun x1 => Letin _ _ M2 (fun x2 => N x1 x2)))
+  (Letin _ _ M2 (fun x2 => Letin _ _ M1 (fun x1 => N x1 x2))).
+intros until N.
+intros [[He1rdec He1wdec] [He1rfin He1wfin]].
+intros [[He2rdec He2wdec] [He2rfin He2wfin]].
+intros [[Henrdec Henwdec] [Henrfin Henwfin]].
+intros HM1eff HM2eff HNeff Hdisjr1w2 Hdisjr2w1 Hdisjw1w2.
+simpl.
+unfold TEffp; unfold EffUnion; unfold Union; unfold caleff.
+simpl.
+intros R HR s0 s0' Hss'R.
+red.
+dcase (M1 s0).
+intros s1 x1 Hs1x1.
+red.
+dcase (M2 s1).
+intros s2 x2 Hs2x2.
+unfold Letin.
+dcase (M2 s0').
+intros s2' x2' Hs2'x2'.
+dcase (M1 s2').
+intros s1' x1' Hs1'x1'.
+unfold arrowPER in HNeff.
+simpl in HNeff.
+unfold Arrow in HNeff.
+unfold TEffp in HNeff.
+(* now, we want to proceed by apply HNeff, but before we let that generate
+   lots of subgoals, let's show a bunch of useful things that we'll need all over
+   the place
+*)
+assert (Hfact1 : forall g, reads e1 g -> s0 g = s0' g).
+ intros g Hre1g.
+ generalize (HR g).
+ intros [HRr HRw].
+ unfold calreads in HRr.
+ apply HRr.
+ left; left; exact Hre1g.
+ exact Hss'R.
+assert (Hfact2 : forall g, reads e2 g -> s0 g = s0' g).
+ intros g Hre2g; generalize (HR g); intros [HRr HRw]; apply HRr.
+ left; right.
+ exact Hre2g.
+ exact Hss'R.
+assert (Hfact3 : forall g, ~ writes e1 g -> s0 g = s1 g).
+ apply (ajknowrites e1 X1 M1 s0 s1 x1).
+ exact HM1eff.
+ exact Hs1x1.
+assert (Hfact4 : forall g, ~ writes e2 g -> s0' g = s2' g).
+ apply (ajknowrites e2 X2 M2 s0' s2' x2').
+ exact HM2eff.
+ exact Hs2'x2'.
+assert (Hfact5 : forall g, reads e1 g -> s0 g = s2' g).
+ intros g Hre1g.
+ rewrite (Hfact1 g Hre1g).
+ apply (Hfact4 g).
+ unfold Disjoint in Hdisjr1w2.
+ intro.
+ apply (Hdisjr1w2 g).
+ split.
+ exact Hre1g.
+ exact H.
+assert (Hfact6 : forall g, reads e2 g -> s1 g = s0' g).
+ intros g Hre2g.
+ rewrite <- (Hfact2 g Hre2g).
+ symmetry.
+ apply (Hfact3 g).
+ intro.
+ apply (Hdisjr2w1 g).
+ split; [exact Hre2g | exact H].
+assert (Hfact7pre := ajknoreads e1 X1 M1 s0 s2' s1 s1' x1 x1').
+assert (Hfact7 := Hfact7pre HM1eff Hfact5 Hs1x1 Hs1'x1').
+clear Hfact7pre.
+assert (Hfact8pre := ajknoreads e2 X2 M2 s1 s0' s2 s2' x2 x2').
+assert (Hfact8 := Hfact8pre HM2eff Hfact6 Hs2x2 Hs2'x2').
+clear Hfact8pre.
+
+assert (Hfact9 : forall g, ~ writes e2 g -> s1 g = s2 g).
+  apply (ajknowrites e2 X2 M2 s1 s2 x2).
+  exact HM2eff.
+  exact Hs2x2.
+
+assert (Hfact10 : forall g, ~ writes e1 g -> s2' g = s1' g).
+  apply (ajknowrites e1 X1 M1 s2' s1' x1').
+  exact HM1eff.
+  exact Hs1'x1'.
+
+assert (unchanged_or_equal : forall g, (s2 g = s0 g /\ s1' g = s0' g) \/ s2 g = s1' g).
+ intro g.
+ (* now switch on whether or not its in writes e1 *)
+ elim (He1wdec g).
+ intro Hwe1g.
+ replace (s2 g) with (s1 g).
+ replace (s0' g) with (s2' g).
+ generalize Hfact7.
+ intros [HH Hdummy]; generalize (HH g).
+ tauto.
+ symmetry; apply (Hfact4 g).
+ intro; apply (Hdisjw1w2 g).
+ split.
+ exact Hwe1g.
+ exact H.
+ apply (Hfact9 g).
+ intro H; apply (Hdisjw1w2 g).
+ split.
+ exact Hwe1g.
+ exact H.
+ (* now in the not writes e1 case *)
+ intro Hnowe1g.
+ (* and subsplit on writes e2 *)
+ elim (He2wdec g).
+ intro Hwe2g.
+ replace (s0 g) with (s1 g).
+ replace (s1' g) with (s2' g).
+ generalize Hfact8.
+ intros [HH Hdummy]; generalize (HH g).
+ tauto.
+ apply (Hfact10 g Hnowe1g).
+ symmetry.
+ exact (Hfact3 g Hnowe1g).
+ (* now down to no writes at all *)
+ intro Hnowe2g.
+ left.
+ split.
+ replace (s2 g) with (s1 g).
+ symmetry; exact (Hfact3 g Hnowe1g).
+ exact (Hfact9 g Hnowe2g).
+ replace (s1' g) with (s2' g).
+ symmetry; exact (Hfact4 g Hnowe2g).
+ exact (Hfact10 g Hnowe1g).
+ (* woo - got the unchanged or equal thing done *)
+
+(* This is the apply *)
+apply HNeff.
+  tauto.
+  tauto.
+
+(* now have to kill caleff en R *)
+unfold caleff.
+intro g; generalize (HR g).
+tauto.
+(* done that, which just leaves R s2 s1', which is where the nasty induction looks like coming in *)
+(* rather annoyingly, I've just realised that I'm going to need the information that
+   if a location isn't in either of the written sets *then* the value is preserved on both sides.
+   I should do that in unchanged or equal, but instead I'll just copy that bit of proof 'cos it's easier
+*)
+assert (Hnowrites_unchanged : forall g, ~ writes e1 g -> ~ writes e2 g -> s2 g = s0 g /\ s1' g = s0' g).
+  intros g Hnowe1g Hnowe2g.
+  split.
+ replace (s2 g) with (s1 g).
+ symmetry; exact (Hfact3 g Hnowe1g).
+ exact (Hfact9 g Hnowe2g).
+ replace (s1' g) with (s2' g).
+ symmetry; exact (Hfact4 g Hnowe2g).
+ exact (Hfact10 g Hnowe1g).
+(* ooohK *)
+
+set (sleft := bdelta s0 s2).
+set (sright := bdelta s0' s1').
+
+assert (indrelated : forall k, R (sleft k) (sright k)).
+  simple induction k.
+  unfold sleft; unfold sright.
+  unfold bdelta.
+  trivial.
+
+  intros n IH.
+  unfold sleft; unfold sright.
+  unfold bdelta; fold bdelta.
+  fold (sleft n).
+  fold (sright n).
+  elim (unchanged_or_equal n).
+  (* in the unchanged case *)
+  intros [Htopsame Hbotsame].
+  replace (update (sleft n) n (s2 n)) with (sleft n).
+  replace (update (sright n) n (s1' n)) with (sright n).
+  exact IH.
+  apply (Extensionality Vars Vals (sright n) (update (sright n) n (s1' n))).
+  intro l.
+  unfold update.
+  dcase (beq_nat n l).
+  intro Hnisl.
+  unfold sright.
+  replace (bdelta s0' s1' n l) with (s0' n).
+  symmetry; exact Hbotsame.
+  replace l with n.
+  symmetry; apply bdelta_equalsbeyond.
+  omega.
+  apply beq_nat_eq.
+  symmetry; exact Hnisl.
+  tauto.
+  (* now the same for the left *)
+  apply (Extensionality Vars Vals (sleft n) (update (sleft n) n (s2 n))).
+  intro l.
+  unfold update.
+  dcase (beq_nat n l).
+  intro Hnisl.
+  unfold sleft.
+  replace (bdelta s0 s2 n l) with (s0 n).
+  symmetry; exact Htopsame.
+  replace l with n.
+  symmetry; apply bdelta_equalsbeyond.
+  omega.
+  apply beq_nat_eq.
+  symmetry; exact Hnisl.
+  tauto.
+  (* now we're in the the equal update case AND I NEED TO KNOW n IS IN ONE OF THE WRITE SETS. BUGGER *)
+  intro Hequal.
+  elim (He1wdec n).
+  intro Hwe1n.
+  assert (HRwritesn : calwrites n R).
+  generalize (HR n); intros [one two]; clear one; apply two.
+  left; left; exact Hwe1n.
+  unfold calwrites in HRwritesn.
+  rewrite Hequal.
+  apply HRwritesn.
+  exact IH.
+  (* now assuming e1 doesn't write it *)
+  elim (He2wdec n).
+  intros Hwe2n Hnwe1n.
+  assert (HRwritesn : calwrites n R).
+  generalize (HR n); intros [one two]; clear one; apply two.
+  left; right; exact Hwe2n.
+  unfold calwrites in HRwritesn.
+  rewrite Hequal.
+  apply HRwritesn.
+  exact IH.
+  (* now neither writes *)
+  intros Hnwe2n Hnwe1n.
+  generalize (Hnowrites_unchanged n Hnwe1n Hnwe2n); intros [Hs2s0n Hs1's0'n].
+  replace (update (sleft n) n (s2 n)) with (sleft n).
+  replace (update (sright n) n (s1' n)) with (sright n).
+  exact IH.
+  apply (Extensionality Vars Vals ( sright n)  (update (sright n) n (s1' n))).
+   intro l.
+   unfold update.
+   dcase (beq_nat n l).
+   intro Hnisl.
+   replace (sright n l) with (s0' l).
+   replace l with n.
+   symmetry; exact Hs1's0'n.
+   apply beq_nat_eq.
+   symmetry; exact Hnisl.
+   symmetry; unfold sright.
+   apply bdelta_equalsbeyond.
+   replace l with n.
+   omega.
+   apply beq_nat_eq.
+   symmetry; exact Hnisl.
+   tauto.
+  apply (Extensionality Vars Vals (sleft n) (update (sleft n) n (s2 n))).
+   intro l.
+   unfold update.
+   dcase (beq_nat n l).
+   intro Hnisl.
+   replace (sleft n l) with (s0 l).
+   replace l with n.
+   symmetry; exact Hs2s0n.
+   apply beq_nat_eq.
+   symmetry; exact Hnisl.
+   symmetry; unfold sleft.
+   apply bdelta_equalsbeyond.
+   replace l with n.
+   omega.
+   apply beq_nat_eq.
+   symmetry; exact Hnisl.
+   tauto.
+
+   (* cool - now have that R relates all the approximations
+      Now just have to show that (up to extensionality) there is a k
+      such that sleft k = s2 and sright k = s1'
+   *)
+
+ 
+assert (stablizes : exists k, sleft k = s2 /\ sright k = s1').
+elim He1wfin.
+intros e1whi He1whi.
+elim He2wfin.
+intros e2whi He2whi.
+set (themax := max e1whi e2whi).
+assert (nowritesbeyond : forall g, themax <= g -> ~ writes e1 g /\ ~ writes e2 g).
+intros g Hgbig.
+split.
+elim (He1wdec g).
+intro HHH; generalize (He1whi g HHH); intro Hgsmall.
+assert (Hfoo := le_max_l e1whi e2whi).
+intro.
+fold themax in Hfoo.
+generalize Hgbig; generalize Hgsmall; generalize Hfoo.
+generalize themax.
+intro xx.
+intuition.
+tauto.
+intro.
+generalize (He2whi g H).
+generalize (le_max_r e1whi e2whi).
+fold themax.
+generalize Hgbig.
+generalize themax; intro xxx.
+intuition.
+
+exists themax.
+split.
+apply (Extensionality Vars Vals (sleft (max e1whi e2whi)) s2).
+intro g.
+case (le_lt_dec themax g).
+intro Hgbig.
+fold themax.
+unfold sleft.
+replace (s2 g) with (s0 g).
+apply bdelta_equalsbeyond.
+trivial.
+generalize (nowritesbeyond g Hgbig); intros [Hno1 Hno2]; generalize (Hnowrites_unchanged g Hno1 Hno2).
+intuition.
+
+intro Hgsmall.
+fold themax; unfold sleft.
+apply bdelta_equalsupto.
+trivial.
+
+apply (Extensionality Vars Vals (sright themax) s1').
+intro g.
+case (le_lt_dec themax g).
+intro Hgbig.
+unfold sright.
+replace (s1' g) with (s0' g).
+apply bdelta_equalsbeyond.
+trivial.
+generalize (nowritesbeyond g Hgbig); intros [Hno1 Hno2]; generalize (Hnowrites_unchanged g Hno1 Hno2).
+intuition.
+
+intro Hgsmall.
+unfold sright.
+apply bdelta_equalsupto.
+trivial.
+
+elim stablizes.
+intros themax [Hs2max Hs1'max].
+rewrite <- Hs2max.
+rewrite <- Hs1'max.
+apply (indrelated themax).
+Qed.
+

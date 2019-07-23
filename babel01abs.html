@@ -1,0 +1,250 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<!-- saved from url=(0045)http://cristal.inria.fr/ICFP2001/program.html -->
+<HTML><HEAD><TITLE>BABEL 2001 preliminary programme</TITLE>
+<META http-equiv=Content-Type content="text/html; charset=windows-1252">
+<META content="Microsoft FrontPage 5.0" name=GENERATOR></HEAD>
+<BODY>
+<H1 align=center><a href="babel01.htm">BABEL 2001</a> final programme with abstracts</H1>
+<H3 align=center>Firenze, Italy, 8th September 2001</H3>
+<HR>
+
+<H3>9:00-10:30. Session 1</H3>
+<DL>
+  <DT><a name="shao"><b><i>Invited Talk: T</i></b></a><b><i><a name="shao">owards 
+  a Principled Multi-Language Infrastructure</a></i></b><DT><i>Zhong Shao 
+  (Yale University)</i></DL>
+<p>Sun's Java architecture introduced a safe virtual machine (VM) in which an 
+ensemble of software components developed independently could smoothly 
+interoperate. The goal of Microsoft's Common Language Runtime (CLR) is to 
+generalize this approach and allow components in many source languages to 
+interoperate safely. CLR supports flexible interoperation by compiling various 
+source languages into a common intermediate language and by using a unified type 
+system. However, the type system in CLR (and Java VM) enforces only conventional 
+type safety in an object-oriented system. Therefore, higher-level specifications 
+(e.g., resource bounds, generalized access control, formal software protocols) 
+cannot be enforced. Because conventional type systems are too inflexible for 
+real applications, developers often bypass the type system, producing code that 
+steps outside the managed part of the VM; such components cannot be verified.<br>
+<br>
+At Yale we have been developing typed common intermediate languages (named 
+FLINT) that can support safely not only the standard object-oriented model, but 
+also higher-order generic (polymorphic) programming and Java-style reflection 
+(introspection). Unlike CLR, our type system is independent of any particular 
+programming model, yet it is capable of expressing all valid propositions and 
+proofs in higher-order predicate logic (so it can be used to capture and verify 
+advanced program properties). The rich type system of FLINT makes it possible to 
+typecheck both compiler intermediate code and low level machine code; this 
+allows typechecking to take place at any phase of compilation, even after 
+optimizations and register allocation. It also leads to a smaller and more 
+extensible VM because low-level native routines that would otherwise be in VM 
+can now be verified and moved into a certified library. This talk describes our 
+vision of the FLINT system, outline our approach to its design, and survey the 
+technologies that can be brought to support its implementation.</p>
+<DL>
+  <dt><font color="#000000"><em><b><a name="Framework">A framework for interoperability</a></b></em></font><b><br>
+  </b>
+  </dt>
+  <i>Kathleen Fisher (AT&amp;T Labs, Research), Riccardo Pucella (Cornell 
+  University) and John Reppy (Lucent Technologies, Bell Labs) </i>
+</DL>
+  <font color="#000000">
+<p>Practical implementations of high-level languages must provide access to 
+libraries and system services that have APIs specified in a low-level language 
+(usually C). An important characteristic of such mechanisms is the 
+foreign-interface policy that defines how to bridge the semantic gap between the 
+high-level language and C. For example, IDL-based tools generate code to 
+marshall data into and out of the high-level representation according to user 
+annotations. The design space of foreign-interface policies is large and there 
+are pros and cons to each approach. Rather than commit to a particular policy, 
+we choose to focus on the problem of supporting a gamut of interoperability 
+policies. In this paper, we describe a framework for language interoperability 
+that is is expressive enough to support very efficient implementations of a wide 
+range of different foreign-interface policies. We describe two tools that 
+implement substantially different policies on top of our framework and present 
+benchmarks that demonstrate their efficiency.</p>
+</font>
+<hr>
+<H3>11:00-12:30. Session 2</H3>
+<DL>
+  <DT><font color="#000000"><em><a name="Alice"><b>Alice in the Land of Oz - An 
+  Interoperability-based Implementation of a Functional Language on Top of a 
+  Relational Language</b> </a> <br>
+  </em></font><i>Leif Kornstaedt (</font>Universität des Saarlandes)</i><font color="#000000"><p>This paper reports practical experience in implementing Alice, an extension 
+  of Standard ML, on top of an existing implementation of Oz. This approach 
+  yields a high-quality implementation with little effort. The combination is an 
+  advanced programming system for both Oz and Alice, which offers more than 
+  either language on its own.</p>
+  </font>
+  <dt><b><font color="#000000"><em><a name="NLF">No-Longer-Foreign: Teaching an ML compiler to 
+  speak C &quot;natively&quot;</a><br>
+  </em></font></b><i></dt>Matthias Blume (Lucent Technologies, Bell Labs) </i>
+</DL>
+  <font color="#000000">
+<p>We present a new foreign-function interface for SML/NJ. It is based on the 
+idea of data- level interoperability--the ability of ML programs to inspect as 
+well as manipulate C data structures directly. The core component of this work 
+is an encoding of the complete C type system in ML types. The encoding makes 
+extensive use of a ``folklore'' typing trick, taking advantage of ML's 
+polymorphism, its type constructors, its abstraction mechanisms, and even 
+functors. A small low-level component which deals with ``new'' C types (struct 
+or union declarations) as well as program linkage is hidden from the 
+programmer's eye by a simple program-generator tool that translates C 
+declarations to corresponding ML glue code. As a competent ML programmer you 
+would not even have to know C to be able to use this new facility! </p>
+</font>
+<DL>
+  <dt><b><font color="#000000"><em><a name="ILX">ILX: Extending the .NET Common IL for Functional 
+  Language Interoperability </a> </em></font></b>
+  <dt><i></dt>
+  Don Syme (Microsoft Research, Cambridge) </i>
+</DL>
+  <font color="#000000">
+<p>This paper describes several extensions to the .NET Common Intermediary 
+Language (CIL), each of which is designed to enable easier implementation of 
+typed high-level programming languages on the .NET platform, and to promote 
+closer integration and interoperability between these languages. In particular 
+we aim for easier interoperability between components whose interfaces are 
+expressed using function types, discriminated unions and parametric 
+polymorphism, regardless of the languages in which these components are 
+implemented. We show that it is possible to add these constructs to an existing, 
+``real world'' intermediary language and that this allows corresponding subsets 
+of constructs to be compiled uniformly, which in turn will allow programmers to 
+use these constructs seamlessly between different languages. In this paper we 
+discuss the motivations for our extensions, which are together called Extended 
+IL (ILX), and describe them via examples. In this setting, many of the 
+traditional responsibilities of the backend of a compiler must be moved to ILX 
+and the execution environment, in particular those related to representation 
+choices and low-level optimizations. We have modified a Haskell compiler to 
+generate this language, and have implemented an assembler that translates the 
+extensions to regular or polymorphic CIL code.</p>
+</font>
+  <P></P>
+<hr>
+<H3>14:00-15:30. Session 3</H3>
+<DL>
+  <DT><b><a name="Mercury"><em>Compiling Mercury to the .NET Common Language Runtime</em>
+  </a></b>
+  <DT><i>
+  <font color="#000000">Tyson Dowd, Fergus Henderson (</font>University of 
+  Melbourne<font color="#000000">) and Peter Ross (</font>Mission Critical, 
+  Belgium) </i>
+</DL>
+<font color="#000000">
+<p>The .NET Common Language Runtime (CLR) offers a new opportunity to experiment 
+with multi-language interoperation, and provides a relatively rare chance to 
+explore deep interoperation of a wide range of programming language paradigms. 
+This article describes how the logic/functional programming language Mercury is 
+compiled to the CLR. We describe the problems with generating code for the CLR 
+and discuss the initial findings regarding the interoperation potential of this 
+platform, and then suggest improvements to both systems that may give smoother 
+interoperation.</p>
+</font>
+<DL>
+  <dt><b><font color="#000000"><a name="Haskell"><em>Object-Oriented Style Overloading for Haskell</em></a></font><a name="Haskell"></dt>
+  </a></b>
+  <dt><i>Mark Shields and Simon Peyton Jones (Microsoft Research, Cambridge) </i>
+</DL>
+<font color="#000000">
+<p>Haskell has a sophisticated mechanism for overloading identifiers with 
+multiple definitions at distinct types. Object-oriented programming has a 
+similar notion of overloading for methods names. Unfortunately, it is not 
+possible to encode object-oriented overloading directly using Haskell 
+overloading. This deficiency becomes particularly tiresome when Haskell programs 
+wish to call methods imported from an object-oriented library. We explore 
+various encodings of object-oriented classes into Haskell, demonstrate precisely 
+where Haskell's existing type class system is unsatisfactory, and propose two 
+refinements. We proceed in three stages. Firstly, we discuss various ways of 
+accommodating sub-typing; we conclude that a simple encoding using Haskell 
+classes is better for our purpose than a more substantial language extension. 
+Second, we introduce a new notion of closed class, and show how this enables 
+improvement of constraints beyond what is possible in Haskell. Closed classes 
+make it easy to encode the truely ad hoc overloading of object-oriented methods 
+without the need for name mangling or gratuitous type annotations. Thirdly, we 
+allow overlapping instances, and define what it means for one instance to be 
+better than another. This mechanism will turn out to subsume the rather complex 
+overloading resolution rules used by object-oriented languages to select the 
+most-specific method at a call site. In the Appendix, we present type checking 
+and inference rules, as well as details of constraint entailment and 
+simplification. However, this workshop paper is somewhat exploratory: the design 
+may shift once we gain experience with an implementation, and we have not 
+devoted any time to showing any formal properties of our system. </p>
+</font>
+<DL>
+  <dt><font color="#000000"><em><b><a name="Annotations">Annotations for Portable Intermediate Languages</a></b></em></font><dt>
+  <i></dt>
+  Fermin Reig (University of Glasgow)</i><dt><i><br>
+  </i><font color="#000000">This paper identifies high-level program properties 
+  that can be discovered by static analysis in a compiler front-end, and that 
+  are useful for classical low-level optimizations. We suggest suitable 
+  annotations to convey these properties to the code generator.</font></DL>
+<hr>
+<H3>16:00-17:30. Session 4</H3>
+<DL>
+  <dt><font color="#000000"><b><em><a name="Oberon">Active Oberon for .NET: An Exercise in Object 
+  Model Mapping</a></em></b></font><dt><i></dt>
+  <font color="#000000">Jurg Gutknecht (</font>ETH Zurich) </i>
+</DL>
+<font color="#000000">
+<p>Active Oberon is a substantial evolution of the programming language Oberon. 
+It has been specially designed for component-oriented software development and 
+in particular for language interoperability. In the context of a joint project 
+with Microsoft Research, the new language has been implemented on top of the new 
+.net platform. Conceptual highlights of Active Oberon are (a) a notion of active 
+object types, (b) an abstraction concept called definition, (c) a module 
+construct, and (d) a block statement. The first three concepts are in fact 
+powerful combinations of concepts: Active objects integrate reactive methods 
+with active behavior, definitions combine units of implementation with units of 
+inheritance, and modules are both name space and singleton object. Block 
+statements unify the grouping of statements that share common processing 
+attributes. In essence, the notion of subclassing or type extension used by most 
+object-oriented languages has been replaced in Active Oberon by the more general 
+concept of definition in combination with a generic type OBJECT and two 
+relations called IMPLEMENTS and REFINES respectively. This article is a report 
+on a work in progress. We divide our presentation into three parts: (a) Short 
+recall of the history of programming languages developed at ETH, (b) extensive 
+conceptual overview of Active Oberon's object model called Active Object System 
+(AOS), (c) discussion of the mapping of the AOS into the Virtual Object System (VOS) 
+exposed by .NET.</p>
+</font>
+<DL>
+  <dt><b><font color="#000000"><em><a name="Mobile">Language-Agnostic Approaches to Mobile Code</a></em></font></dt></b>
+  <dt><i>
+  <font color="#000000">Peter Housel, Christian Stork, Vivek Haldar, Niall 
+  Dalton and Michael Franz (University of California, Irvine)</font> </i>
+</DL>
+<font color="#000000">
+<p>The Java Virtual Machine is biased towards transporting Java programs. As a 
+consequence, the less similar to Java the language one programs in, the less 
+efficient the transport via JVM becomes. Microsoft's .NET transport format fares 
+better in this respect because it has a more flexible type system and 
+instruction set, but it is not extensible, and for example, has no provision for 
+supporting explicit programmer-specified parallelism. Microsoft's format 
+addresses performance issues by including a variant of SSA along with the 
+bytecode, but these are not verified and hence require authentication-based 
+trust. We have been exploring the design space for mobile-code technologies. 
+This is a project with a time horizon of 5-10 years aiming to arrive at 
+meta-level insights, but we are simultaneously also working on proof-of-concept 
+implementations. One focus is on turning semantic properties of programming 
+language into well-formedness properties of the mobile-code format itself, 
+thereby removing the expensive verification process required with byte-code 
+formats. A beneficial side effect of such encodings is compactness - illegal 
+programs are not expressible and hence do not dilute the entropy. Our first 
+results are encouraging: in spite of being fully generic, parametrized by an 
+abstract grammar, applying our technique to Java yields an encoding that is 
+consistently more compact than the best known dedicated compression scheme for 
+Java.</p>
+</font>
+<DL>
+  <dt><font color="#000000"><em><b><a name="Tail">Tail call elimination on the Java Virtual 
+  Machine</a></b></em></font><dt><i></dt>
+  Michel Schinz and Martin Odersky (Ecole Polytechnique F<font face="Times New Roman">é</font>d<font face="Times New Roman">é</font>rale 
+  de Lausanne) </i>
+</DL>
+<font color="#000000">
+<p>A problem that often has to be solved by compilers for functional languages 
+targeting the Java Virtual Machine is the elimination of tail calls. This paper 
+explains how we solved it in our Funnel compiler and presents some experimental 
+results about the impact our technique has on both performance and size of the 
+compiled programs. </p>
+<hr></font>
+</BODY></HTML>
